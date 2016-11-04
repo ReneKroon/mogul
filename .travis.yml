@@ -1,8 +1,15 @@
 language: go
 version: 1.7
 
+sudo: false
 services:
-  - mongodb
+- mongodb
+addons:
+  apt:
+    sources:
+    - mongodb-3.0-precise
+    packages:
+    - mongodb-org-server
 
 before_script:
   - sleep 15
