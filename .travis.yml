@@ -10,6 +10,3 @@ addons:
     - mongodb-3.0-precise
     packages:
     - mongodb-org-server
-
-before_script:
-  - sleep 15

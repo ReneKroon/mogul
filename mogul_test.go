@@ -131,8 +131,8 @@ func TestWorkWithLockTwice(t *testing.T) {
 
 	timeFrame := time.Millisecond * 100
 
-	deadline := time.Now().Add(timeFrame)
 	if got, _ := l.TryLock(timeFrame); got {
+		deadline := time.Now().Add(timeFrame)
 
 		ctx, cancel := context.WithDeadline(context.Background(), deadline)
 		defer cancel()
