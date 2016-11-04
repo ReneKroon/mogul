@@ -18,6 +18,7 @@ var (
 	collection = flag.String("mogul.collection", "locks", "collection to use for lock objects, defaults to locks")
 )
 
+// Mutex is the object used for locking
 type Mutex struct {
 	doc        document
 	collection *mgo.Collection
@@ -29,6 +30,8 @@ type document struct {
 	ExpiresAtUtc time.Time `bson:"expires"`
 }
 
+// Use the new function to combine a mongo session with your lock's name and user
+// to obtain a new mutex, which is not locked yet
 func New(name string, user string, session *mgo.Session) *Mutex {
 
 	clone := session.Copy()
@@ -39,6 +42,8 @@ func New(name string, user string, session *mgo.Session) *Mutex {
 
 }
 
+// Trylock will claim a lock if it is available. It also returns true when you already hold the lock.
+// This extends the duration
 func (m *Mutex) TryLock(atMost time.Duration) (bool, error) {
 
 	now := time.Now().UTC()
@@ -46,7 +51,7 @@ func (m *Mutex) TryLock(atMost time.Duration) (bool, error) {
 
 	m.doc.ExpiresAtUtc = until
 
-	selector := bson.M{"$and": []bson.M{bson.M{"_id": m.doc.Name}, bson.M{"expires": bson.M{"$lt": now}}}}
+	selector := bson.M{"$or": []bson.M{m.identityClause(), bson.M{"$and": []bson.M{bson.M{"_id": m.doc.Name}, bson.M{"expires": bson.M{"$lt": now}}}}}}
 	_, err := m.collection.Upsert(selector, &m.doc)
 
 	found := 0
@@ -57,10 +62,12 @@ func (m *Mutex) TryLock(atMost time.Duration) (bool, error) {
 	return found > 0, err
 }
 
+// Unlock frees the lock, removing the corresponding record in the database
 func (m *Mutex) Unlock() error {
 	return m.collection.Remove(m.identityClause())
 }
 
+// IsExpired will return true when your lock time has expired
 func (m *Mutex) IsExpired() bool {
 	return m.doc.ExpiresAtUtc.Before(time.Now().UTC())
 }

@@ -27,7 +27,7 @@ func TestSingleNode(t *testing.T) {
 		lock     *Mutex
 	}{
 		0: {
-			time.Millisecond * 10000,
+			time.Hour * 1,
 			true,
 			l,
 		},
@@ -38,7 +38,7 @@ func TestSingleNode(t *testing.T) {
 		},
 		2: {
 			time.Millisecond * 1000,
-			false,
+			true,
 			l,
 		},
 	}
@@ -61,9 +61,10 @@ func TestMultipleRoutines(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		wg.Add(1)
+		user := fmt.Sprintf("User#%d", i)
 		go func() {
 			time.Sleep(time.Microsecond * time.Duration(rand.Float32()*10000))
-			l := New("Multiple", "host", session)
+			l := New("Multiple", user, session)
 			if got, _ := l.TryLock(time.Hour); got {
 				hits++
 
@@ -105,11 +106,28 @@ func TestManyLocks(t *testing.T) {
 	verify.Values(t, "Should get one value per iteration", hits, int32(100))
 }
 
+func TestExtendTime(t *testing.T) {
+	session := initDB(t)
+	defer clearDB(t, session)
+
+	l := New("Reclaim after deadline", "host", session)
+
+	l.TryLock(time.Minute)
+	l.TryLock(time.Minute * 5)
+
+	if l.doc.ExpiresAtUtc.Sub(time.Now().UTC()) < time.Minute {
+		t.Error("Deadline should be extended")
+	}
+
+	l.Unlock()
+}
+
 func TestWorkWithLockTwice(t *testing.T) {
 	session := initDB(t)
 	defer clearDB(t, session)
 
 	l := New("Reclaim after deadline", "host", session)
+	next := New("Reclaim after deadline", "second host", session)
 
 	timeFrame := time.Millisecond * 100
 
@@ -125,7 +143,7 @@ func TestWorkWithLockTwice(t *testing.T) {
 
 		}
 
-		got, _ := l.TryLock(timeFrame)
+		got, _ := next.TryLock(timeFrame)
 		verify.Values(t, "Failed to get lock after expiration", got, true)
 	} else {
 		t.Errorf("Fail")
