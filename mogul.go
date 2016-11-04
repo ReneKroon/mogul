@@ -43,7 +43,7 @@ func New(name string, user string, session *mgo.Session) *Mutex {
 }
 
 // Trylock will claim a lock if it is available. It also returns true when you already hold the lock.
-// This extends the duration
+// This extends the duration if you already hold the lock.
 func (m *Mutex) TryLock(atMost time.Duration) (bool, error) {
 
 	now := time.Now().UTC()
