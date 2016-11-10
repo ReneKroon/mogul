@@ -59,17 +59,27 @@ func (m *Manager) Next(user string, leaseTime *time.Duration) (*Task, error) {
 
 	var result Task
 
-	clause := bson.M{"location": bson.M{"$near": []float64{rand.Float64(), rand.Float64()}}}
-	clause["user"] = bson.M{"$exists": false}
-	//clause["expires"]
+	now := time.Now().UTC()
+
+	unclaimed := bson.M{"user": bson.M{"$exists": false}}
+	expired := bson.M{"expires": bson.M{"$lt": now}}
+	unclaimedOrExpired := bson.M{"$or": []bson.M{unclaimed, expired}}
+
+	nearest := bson.M{"location": bson.M{"$near": []float64{rand.Float64(), rand.Float64()}}}
+
+	clause := bson.M{"$and": []bson.M{nearest, unclaimedOrExpired}}
 
 	updates := bson.M{"user": user}
+	updateClause := bson.M{}
 	if leaseTime != nil {
 		updates["expires"] = time.Now().UTC().Add(*leaseTime)
+		updateClause = bson.M{"$set": updates}
+	} else {
+		updateClause = bson.M{"$set": updates, "$unset" : bson.M{"expires": ""}}
 	}
 
 	_, err := m.tasks.Find(clause).Apply(mgo.Change{
-		Update:    bson.M{"$set": updates},
+		Update:   updateClause ,
 		ReturnNew: true,
 	}, &result)
 
@@ -89,10 +99,9 @@ func (m *Manager) Complete(t *Task) error {
 // If the task failed we remove our claim on the task, to make it available again.
 // The job will be run again. If you don't want this then call Complete.
 func (m *Manager) Failed(t *Task) error {
-	fields := bson.M{"user" : ""}
+	fields := bson.M{"user": ""}
 	fields["expires"] = ""
 	unset := bson.M{"$unset": fields}
 
 	return m.tasks.Update(t.identity(), unset)
 }
-

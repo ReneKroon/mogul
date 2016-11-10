@@ -113,7 +113,7 @@ func TestFailTask(t *testing.T) {
 
 }
 
-func TestClaimAfterExpiration(t *testing.T) {
+func TestClaimAfterExpirationWithNewExpiration(t *testing.T) {
 	session := initDB(t)
 	defer clearDB(t, session)
 
@@ -132,7 +132,8 @@ func TestClaimAfterExpiration(t *testing.T) {
 	_, err = m.Next(user, &lease)
 
 	time.Sleep(time.Millisecond)
-	task, err := m.Next("u2", &lease)
+	lease2 := time.Hour
+	task, err := m.Next("u2", &lease2)
 
 	if err != nil {
 		t.Fatal(err)
@@ -141,9 +142,43 @@ func TestClaimAfterExpiration(t *testing.T) {
 	verify.Values(t, "Should have gotten single task back out", task.Name, name)
 	verify.Values(t, "Should have payload back out", task.Data, payload)
 	verify.Values(t, "Should have been assigned to me", *task.User, "u2")
-	//verify.Values(t, "Should have no expires value", task.ExpiresAtUtc, noLease)
+	if !task.ExpiresAtUtc.UTC().After(time.Now().UTC()) {
+		t.Fatal("Expiration is in future")
+	}
 
+}
 
+func TestClaimAfterExpirationWithoutNewExpiration(t *testing.T) {
+	session := initDB(t)
+	defer clearDB(t, session)
+
+	var m TaskHandler = New(session.DB(database).C(collection), session.DB(database).C(tasks))
+
+	payload := []byte("barfbarf")
+	user := "testUser"
+	name := "firstTask"
+
+	err := m.Add(name, payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lease := time.Microsecond
+	_, err = m.Next(user, &lease)
+
+	time.Sleep(time.Millisecond)
+	task, err := m.Next("u2", nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var noLease *time.Time
+
+	verify.Values(t, "Should have gotten single task back out", task.Name, name)
+	verify.Values(t, "Should have payload back out", task.Data, payload)
+	verify.Values(t, "Should have been assigned to me", *task.User, "u2")
+	verify.Values(t, "Should have no expires value", task.ExpiresAtUtc, noLease)
 }
 
 func initDB(t *testing.T) *mgo.Session {

@@ -10,7 +10,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Task is the entity we work with
+// Task is the entity we work with to regulate jobs. It consists of a name and a payload.
+// If a task is claimed the user and optinal expiresAtUtc will be filled.
 type Task struct {
 	Name         string     `bson:"_id"`
 	User         *string    `bson:"user,omitempty"`
@@ -19,6 +20,8 @@ type Task struct {
 	Doc          meta       `bson:",inline"`
 }
 
+// You can cast the Manager object to a TaskHandler to have a dedicated object
+// for modifying tasks.
 type TaskHandler interface {
 	Add(name string, data []byte) error
 	Next(user string, leaseTime *time.Duration) (*Task, error)
