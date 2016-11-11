@@ -14,8 +14,6 @@ import (
 	"sync/atomic"
 )
 
-
-
 func TestSingleNode(t *testing.T) {
 	session := initDB(t)
 	defer clearDB(t, session)
@@ -141,7 +139,7 @@ func TestMutex_IsExpired(t *testing.T) {
 
 	l.TryLock(time.Millisecond * 100)
 	verify.Values(t, "Not expired at start", l.IsExpired(), false)
-	time.Sleep(time.Millisecond* 100)
+	time.Sleep(time.Millisecond * 100)
 	verify.Values(t, "Not expired at start", l.IsExpired(), true)
 }
 
@@ -175,5 +173,3 @@ func TestWorkWithLockTwice(t *testing.T) {
 	}
 
 }
-
-

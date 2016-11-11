@@ -6,18 +6,35 @@
 package mogul
 
 import (
-	"time"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 )
 
 // Task is the entity we work with to regulate jobs. It consists of a name and a payload.
 // If a task is claimed the user and optinal expiresAtUtc will be filled.
 type Task struct {
-	Name         string     `bson:"_id"`
-	User         *string    `bson:"user,omitempty"`
-	Data         []byte     `bson:"task"`
-	ExpiresAtUtc *time.Time `bson:"expires,omitempty"`
-	Doc          meta       `bson:",inline"`
+	Name         string          `bson:"_id"`
+	User         *string         `bson:"user,omitempty"`
+	Data         []byte          `bson:"task"`
+	ExpiresAtUtc *time.Time      `bson:"expires,omitempty"`
+	Doc          meta            `bson:",inline"`
+	collection   *mgo.Collection `bson:"-"`
+}
+
+// If the task has been completed succesfully we remove it from the database.
+func (t *Task) Complete() error {
+	return t.collection.Remove(t.identity())
+}
+
+// If the task failed we remove our claim on the task, to make it available again.
+// The job will be run again. If you don't want this then call Complete.
+func (t *Task) Failed() error {
+	fields := bson.M{"user": ""}
+	fields["expires"] = ""
+	unset := bson.M{"$unset": fields}
+
+	return t.collection.Update(t.identity(), unset)
 }
 
 // You can cast the Manager object to a TaskHandler to have a dedicated object
@@ -25,8 +42,6 @@ type Task struct {
 type TaskHandler interface {
 	Add(name string, data []byte) error
 	Next(user string, leaseTime *time.Duration) (*Task, error)
-	Complete(*Task) error
-	Failed(*Task) error
 }
 
 type meta struct {

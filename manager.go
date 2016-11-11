@@ -1,3 +1,6 @@
+// Package mogul provides distributed locking and task handling via mongodb.
+//
+// Using mongo documents we can synchronize and do work over a number of nodes.
 package mogul
 
 import (
@@ -75,11 +78,11 @@ func (m *Manager) Next(user string, leaseTime *time.Duration) (*Task, error) {
 		updates["expires"] = time.Now().UTC().Add(*leaseTime)
 		updateClause = bson.M{"$set": updates}
 	} else {
-		updateClause = bson.M{"$set": updates, "$unset" : bson.M{"expires": ""}}
+		updateClause = bson.M{"$set": updates, "$unset": bson.M{"expires": ""}}
 	}
 
 	_, err := m.tasks.Find(clause).Apply(mgo.Change{
-		Update:   updateClause ,
+		Update:    updateClause,
 		ReturnNew: true,
 	}, &result)
 
@@ -87,21 +90,6 @@ func (m *Manager) Next(user string, leaseTime *time.Duration) (*Task, error) {
 		return nil, err
 	}
 
+	result.collection = m.tasks
 	return &result, nil
-}
-
-// If the task has been completed succesfully we remove it from the database.
-func (m *Manager) Complete(t *Task) error {
-
-	return m.tasks.Remove(t.identity())
-}
-
-// If the task failed we remove our claim on the task, to make it available again.
-// The job will be run again. If you don't want this then call Complete.
-func (m *Manager) Failed(t *Task) error {
-	fields := bson.M{"user": ""}
-	fields["expires"] = ""
-	unset := bson.M{"$unset": fields}
-
-	return m.tasks.Update(t.identity(), unset)
 }

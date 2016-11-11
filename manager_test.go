@@ -1,11 +1,10 @@
 package mogul
 
 import (
-	"testing"
 	"github.com/pascaldekloe/goe/verify"
 	"gopkg.in/mgo.v2"
+	"testing"
 	"time"
-
 )
 
 var database = "mogul"
@@ -61,11 +60,11 @@ func TestCompleteTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.Complete(task)
+	task.Complete()
 	task, err = m.Next(user, nil)
 
 	if task != nil {
-		t.Fatalf("Got task %q where none should have been found", task)
+		t.Fatalf("Got task %v where none should have been found", task)
 	}
 
 	if err != mgo.ErrNotFound {
@@ -96,7 +95,7 @@ func TestFailTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.Failed(task)
+	task.Failed()
 	task, err = m.Next("newUser", nil)
 
 	if err != nil {
@@ -109,7 +108,6 @@ func TestFailTask(t *testing.T) {
 	verify.Values(t, "Should have payload back out", task.Data, payload)
 	verify.Values(t, "Should have been assigned to me", *task.User, "newUser")
 	verify.Values(t, "Should have no expires value", task.ExpiresAtUtc, noLease)
-
 
 }
 
