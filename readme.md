@@ -13,18 +13,38 @@ associated lock has expired.
 
 ``` Go
 
-func myWorkForSingleNode() {
+func myTaskManagement() {
 ..
 
-	lock := New("ImportantLock", "user#1", session)
+	var m Mananger = New(session.DB(database).C(collection), session.DB(database).C(tasks))
 	
-	if got, _ := l.TryLock(timeFrame); got {
+	lock := m.NewMutex(name, user)
+	 
+	if got, _ := lock.TryLock(timeFrame); got {
 	    defer lock.Unlock()
 	
-	    // Do important stuff
+	    // create some tasks
+	    m.Add(taskName, data)
+	    m.Add(taskName2, data2)
 	
 	}
 ..
+}
+
+func myTaskHandler() {
+    
+    var m Mananger = New(session.DB(database).C(collection), session.DB(database).C(tasks))
+    lease := time.Hour
+    
+    for {
+    
+        task, err = m.Next(user, &lease)
+        
+        if task != nil {
+            // unmarshal task.data and do some work.
+        }
+    
+    }
 }
 
 ```
