@@ -1,6 +1,9 @@
 // Package mogul provides distributed locking and task handling via mongodb.
 //
 // Using mongo documents we can synchronize and do work over a number of nodes.
+// The typical usecase would be to run a cron job or scheduler on all nodes and then perform
+// task creation on a single node using a lock. These tasks can then be efficiently executed
+// on all nodes that are alive.
 package mogul
 
 import (
@@ -15,6 +18,8 @@ type Manager struct {
 	tasks *mgo.Collection
 }
 
+// New creates a new manager to perform locking and task management. You can cast it to
+// TaskHandler or MutexCreator to limit the behaviour to one of the two subjects.
 func New(locks *mgo.Collection, tasks *mgo.Collection) *Manager {
 
 	clone := locks.Database.Session.Clone()
@@ -47,7 +52,7 @@ func (m *Manager) NewMutex(name string, user string) *Mutex {
 
 }
 
-// Add a task, with a name (should be unique) and some payload for the consumer to base his/her work on.
+// Add a task, with a name (should be unique for different jobs) and some payload for the consumer to base his/her work on.
 func (m *Manager) Add(name string, data []byte) error {
 	// https://gist.github.com/icchan/bd42095afd8305594778
 	err := m.tasks.Insert(&Task{Name: name, Data: data, Doc: meta{Location: []float64{rand.Float64(), rand.Float64()}}})

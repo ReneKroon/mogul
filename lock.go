@@ -24,6 +24,7 @@ type lock struct {
 	ExpiresAtUtc time.Time `bson:"expires"`
 }
 
+// MutexCreator is a specialization of the Manager struct for locking
 type MutexCreator interface {
 	NewMutex(name string, user string) *Mutex
 }
