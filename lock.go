@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"log"
 )
 
 // Mutex is the object used for locking
@@ -38,15 +39,19 @@ func (m *Mutex) TryLock(atMost time.Duration) (bool, error) {
 
 	m.doc.ExpiresAtUtc = until
 
-	selector := bson.M{"$or": []bson.M{m.identityClause(), bson.M{"$and": []bson.M{bson.M{"_id": m.doc.Name}, bson.M{"expires": bson.M{"$lt": now}}}}}}
-	_, err := m.collection.Upsert(selector, &m.doc)
+	var result lock
 
-	found := 0
-	if err == nil {
-		found, err = m.collection.Find(m.identityClause()).Count()
+	selector := bson.M{"$or": []bson.M{m.identityClause(), bson.M{"$and": []bson.M{bson.M{"_id": m.doc.Name}, bson.M{"expires": bson.M{"$lt": now}}}}}}
+
+	_, err := m.collection.Find(selector).Apply(mgo.Change{
+		Update:    &m.doc,
+		ReturnNew: true,
+	}, &result)
+	if err == mgo.ErrNotFound {
+		err = m.collection.Insert(&m.doc)
 	}
 
-	return found > 0, err
+	return err == nil, err
 }
 
 // Unlock frees the lock, removing the corresponding record in the database
