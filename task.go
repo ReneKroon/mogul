@@ -6,9 +6,10 @@
 package mogul
 
 import (
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"time"
+
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 )
 
 // Task is the entity we work with to regulate jobs. It consists of a name and a payload.

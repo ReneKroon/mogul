@@ -1,10 +1,11 @@
 package mogul
 
 import (
-	"github.com/pascaldekloe/goe/verify"
-	"gopkg.in/mgo.v2"
 	"testing"
 	"time"
+
+	"github.com/globalsign/mgo"
+	"github.com/pascaldekloe/goe/verify"
 )
 
 var database = "mogul"

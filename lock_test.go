@@ -10,8 +10,9 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/pascaldekloe/goe/verify"
 	"sync/atomic"
+
+	"github.com/pascaldekloe/goe/verify"
 )
 
 func TestSingleNode(t *testing.T) {
