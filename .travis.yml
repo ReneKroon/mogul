@@ -1,5 +1,8 @@
 language: go
-version: 1.11
+
+go:
+  - 1.11
+  - 1.10.4
 
 sudo: false
 services:
@@ -7,6 +10,6 @@ services:
 addons:
   apt:
     sources:
-    - mongodb-3.6-precise
+    - mongodb-3.4-precise
     packages:
     - mongodb-org-server
